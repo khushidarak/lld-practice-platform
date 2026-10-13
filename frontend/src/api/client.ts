@@ -95,9 +95,9 @@ async function createSubmission(
   attemptId: string,
   content: SubmissionContent,
 ): Promise<CreateSubmissionResponse> {
-  return request<CreateSubmissionResponse>(`/attempts/${attemptId}/submissions`, {
+  return request<CreateSubmissionResponse>('/submissions', {
     method: 'POST',
-    body: JSON.stringify({ content }),
+    body: JSON.stringify({ attemptId, content }),
   })
 }
 
