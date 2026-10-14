@@ -10,7 +10,7 @@ This document describes 3-5 meaningful AI-assisted decisions made during the dev
 
 **What I rejected:** The AI initially suggested a broader landscape including video courses and general coding practice platforms. I rejected this because the assignment is specifically about LLD practice, not general learning. Focusing narrowly on tools that actually review LLD designs was more useful.
 
-**Why:** The narrow framing kept research to 2-3 hours as the assignment guide suggests, and the comparison table made it easy to spot that existing tools lean heavily on code/long sessions and produce score-based feedback—both gaps the MVP should address.
+**Why:** The narrow framing kept the research note within the 1–2 page limit and a short timeline, and the comparison table made it easy to spot that existing tools lean heavily on code/long sessions and produce score-based feedback—both gaps the MVP should address.
 
 ## 2. Submission format decision (text vs code vs diagram)
 
@@ -26,7 +26,7 @@ This document describes 3-5 meaningful AI-assisted decisions made during the dev
 
 **What AI suggested:** I asked how to structure feedback so it's useful when multiple valid designs exist. The AI suggested using a fixed rubric with criterion-level evaluation rather than a single "score the design" prompt. It recommended a structured output format: criterion → score → evidence → concern → suggestion → confidence. It also advised separating deterministic checks (rule-based) from judgement-heavy checks (LLM) and using low temperature with JSON schema validation.
 
-**What I accepted:** I accepted the full rubric approach and the separation of rule-based vs LLM evaluation. The mock API implements this with `RuleBasedEvaluator` (structure checks) and `LLMEvaluator` (judgement criteria). The `CANNED_EVALUATION` in the mock follows the exact output shape.
+**What I accepted:** I accepted the full rubric approach and the separation of rule-based vs LLM evaluation. The backend implements this with `RuleBasedEvaluator` (structure checks) and `LLMEvaluator` (judgement criteria). The frontend mock returns a `CANNED_EVALUATION` that follows the same output shape.
 
 **What I rejected:** The AI suggested using a reference solution as a "hint set" for the LLM to compare against. I rejected this because the assignment explicitly warns against treating a reference solution as the only correct answer. Instead, the rubric judges properties of the design itself (responsibilities, coupling, extensibility) rather than similarity to a reference.
 
