@@ -69,9 +69,11 @@ export class EvaluationService {
       // Save evaluation
       this.submissionRepo.saveEvaluation(submissionId, evaluation)
 
-      // Mark as completed
+      // Mark as completed. Clear failureReason: a completed submission must
+      // not keep a stale reason from a previous FAILED run.
       this.submissionRepo.updateStatus(submissionId, 'COMPLETED', {
         completedAt: new Date().toISOString(),
+        failureReason: undefined,
       })
     } catch (error) {
       console.error('Evaluation failed:', error)
