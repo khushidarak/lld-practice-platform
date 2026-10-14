@@ -20,7 +20,7 @@ This document describes 3-5 meaningful AI-assisted decisions made during the dev
 
 **What I rejected:** The AI suggested adding a "diagram export" feature where users could upload a PNG alongside text. I rejected this because the MVP doesn't have a way to parse diagrams, and adding a UI for upload without evaluation logic would be feature creep.
 
-**Why:** Text is sufficient to judge the six evaluation criteria (requirement coverage, responsibilities, coupling, encapsulation, extensibility, explanation quality). Adding formats later is supported by the `SubmissionContent` interface design, so deferring them is a sensible trade-off for a 2-day prototype.
+**Why:** Text is sufficient to judge the eight criteria the backend actually runs — four rule checks (sections present, minimum classes, requirement coverage, class completeness) and four LLM-judged criteria (responsibilities, coupling, tradeoffs, extensibility). Adding formats later means widening the `SubmissionContent` type and teaching the validator about it, so deferring them is a sensible trade-off for a 2-day prototype.
 
 ## 3. Rubric structure and LLM evaluation approach
 
@@ -36,7 +36,7 @@ This document describes 3-5 meaningful AI-assisted decisions made during the dev
 
 **What AI suggested:** When I asked how to handle slow or failing AI evaluation, the AI suggested a three-state machine (SUBMITTED → EVALUATING → COMPLETED/FAILED) with idempotency via content hashing. It recommended persisting the submission before evaluation starts, running evaluation in the background, and allowing retry on failure. It also suggested a degraded mode where rule-based results are returned if the LLM fails.
 
-**What I accepted:** I accepted the state machine, persistence-first approach, and idempotency. The mock implements all of this with `SubmissionStatus`, content hash deduplication, and the `forceFail`/`forceDegraded` testing hooks.
+**What I accepted:** I accepted the state machine, persistence-first approach, and duplicate detection. The backend implements all of this: `EvaluationService` guards transitions (only SUBMITTED or FAILED may move to EVALUATING), the submission is saved before evaluation starts, and content-hash-plus-attempt dedupe returns 409 on an identical resubmission. The frontend mock keeps `forceFail`/`forceDegraded` hooks for demoing the failure paths.
 
 **What I rejected:** The AI suggested adding a message queue (e.g., RabbitMQ or SQS) for reliability. I rejected this because the assignment explicitly says "do not turn this into a distributed-systems project" and a simple monolith is acceptable. In-process background work with a startup sweep for stuck jobs is sufficient for the MVP.
 
@@ -46,8 +46,8 @@ This document describes 3-5 meaningful AI-assisted decisions made during the dev
 
 **What AI suggested:** I asked for a domain model that would pass the two change tests (add diagram format, add human reviewer). The AI suggested interface-based variation points: `SubmissionContent` for formats, `Evaluator` for evaluation approaches, and `LLMClient` for model vendors. It advised against adding interfaces for data-owning classes like `Problem` or `Attempt` unless a second implementation was clearly needed.
 
-**What I accepted:** I accepted the interface-based design at the variation points. The mock's `mockClient.ts` doesn't implement interfaces explicitly (it's a single object), but the design document describes `SubmissionContent`, `Evaluator`, and `LLMClient` as the points of change.
+**What I accepted:** I accepted the interface-based design at the variation points that actually have two implementations. In the backend that is `Evaluator` (rule-based, LLM, composite — injected into `EvaluationService`, so tests never call OpenAI) and `ChatClient` (the OpenAI SDK call, faked in tests). `SubmissionContent` stayed a plain data type: validation lives in the route, and there is no second format yet to justify an interface. The frontend mock mirrors the same REST shapes rather than sharing TypeScript interfaces.
 
 **What I rejected:** The AI suggested adding a factory pattern for creating evaluators and a strategy pattern for rubric selection. I rejected this because the MVP has a single rubric and a fixed evaluator composition. Adding patterns without a clear use case would be over-engineering.
 
-**Why:** The assignment asks to show engineering judgement, not pattern knowledge. Interfaces at the actual variation points make the change tests trivial to pass. Avoiding interfaces elsewhere keeps the model simple. This is the right balance: prepare for change where it's likely, avoid complexity where it isn't.
+**Why:** The assignment asks to show engineering judgement, not pattern knowledge. Interfaces at the two actual variation points — grading strategy and model client — make the change tests (add a human reviewer, swap the model vendor) trivial to pass, and the DI seam is what makes the failure paths (LLM timeout, malformed output, forced failure) testable without a network call. Avoiding interfaces elsewhere keeps the model simple: prepare for change where it's likely, avoid complexity where it isn't.

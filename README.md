@@ -1,144 +1,127 @@
 # LLD Practice Platform
 
-A 2-day engineering assignment to build a focused LLD practice experience. Learners choose a problem, write a structured text design, submit it, and receive criterion-by-criterion feedback with evidence from their own work.
+A focused practice loop for Low-Level Design: **choose a problem → write a structured design → submit → get criterion-by-criterion feedback → review history → try again.**
 
-## Overview
+Learners write their design as structured text (assumptions, classes/interfaces with responsibilities, relationships, key flow, trade-offs). The platform grades it against a **rubric** (not a reference solution, so different valid designs can score well) and quotes evidence from the learner's own text.
 
-This MVP demonstrates a complete practice loop:
+- Design note: [docs/DESIGN.md](docs/DESIGN.md)
+- Research note: [docs/RESEARCH.md](docs/RESEARCH.md)
+- AI usage: [AI_USAGE.md](AI_USAGE.md)
 
-1. **Choose problem** from 4 classic LLD problems (Parking Lot, Elevator, Vending Machine, LRU Cache)
-2. **Write design** in a structured form: assumptions, classes with responsibilities, relationships, key flow, trade-offs
-3. **Submit** and see the evaluation status transition through SUBMITTED → EVALUATING → COMPLETED/FAILED
-4. **Get feedback** per criterion (requirement coverage, responsibilities, coupling, trade-offs, extensibility, explanation)
-5. **Review** past attempts and see recurring weaknesses by criterion
-6. **Retry** with a change request (e.g., "add EV charging spots") to practice extensibility
+## Run it
 
-The submission format is structured text rather than code or diagrams. This is the smallest format that still reveals design reasoning, and it avoids needing a code runner or visual editor in the MVP.
+Requires Node 19+ and npm. The backend uses the global `crypto` and `fetch` APIs without imports (Node exposes both by default from v19) and TypeScript targets ES2022.
 
-## Architecture
+### 1. Backend (port 3000)
 
-### Design approach
+```bash
+cd backend
+npm install
+npm run dev
+```
 
-- **Rubric-first evaluation**, not reference solution comparison. Multiple valid designs can score well on the same criteria.
-- **Deterministic checks first, LLM second.** Structure and completeness are rule-checked; judgement-heavy criteria go to the LLM with a fixed rubric and JSON output.
-- **Evidence-linked feedback.** Every criterion returns score, evidence quoted from the learner's text, concern, suggestion, and confidence.
-- **State machine reliability.** SUBMITTED → EVALUATING → COMPLETED/FAILED with persistence-first, idempotency via content hash, and retry on failure.
-- **Extensibility points.** `SubmissionContent`, `Evaluator`, and `LLMClient` are interfaces where variation is expected (new formats, new evaluators, new models).
+Evaluation works with **no API key**: only the deterministic rule checks run, and results are labelled *degraded*. To enable LLM-judged criteria (responsibilities, coupling, trade-offs, extensibility):
 
-### Current implementation
+```bash
+OPENAI_API_KEY=sk-... npm run dev
+```
 
-The prototype is a **frontend-only mock** that demonstrates the full practice flow using localStorage instead of a real backend. The mock implements:
-
-- Full domain model (Problem, Attempt, Submission, Evaluation, Rubric, Criterion)
-- State machine with time-based transitions for demo purposes
-- Deterministic validation (required sections, non-empty fields, minimum classes)
-- Simulated LLM evaluation with canned results
-- Progress analyzer that computes per-criterion trends
-- Idempotency via content hash
-- Failure scenarios (FORCE_FAIL, FORCE_DEGRADED in assumptions text)
-
-See [docs/DESIGN.md](docs/DESIGN.md) for the complete design note, including domain model, evaluation approach, change tests, and trade-offs.
-
-## Run the project
-
-### Prerequisites
-
-- Node.js 18+
-- npm
-
-### Frontend (mock mode)
-
-The mock mode uses localStorage and a simulated API. No backend is required.
+### 2. Frontend (port 5173)
 
 ```bash
 cd frontend
-cp .env.example .env
-# Edit .env and set VITE_USE_MOCK=true
+cp .env.example .env      # VITE_API_URL=http://localhost:3000/api, VITE_USE_MOCK=false
 npm install
 npm run dev
 ```
 
 Open http://localhost:5173.
 
-### Frontend (with real backend)
+**Mock mode (no backend needed):** set `VITE_USE_MOCK=true` in `frontend/.env`. This uses a localStorage client with canned LLM results. Put `FORCE_FAIL` or `FORCE_DEGRADED` in the *assumptions* field to demo the failure and degraded paths.
 
-If you implement the backend described in the design note:
-
-```bash
-cd frontend
-cp .env.example .env
-# Edit .env and set VITE_API_URL to your backend URL
-npm install
-npm run dev
-```
-
-### Testing
+### Tests
 
 ```bash
-cd frontend
-npm test
+cd backend && npm test      # 68 tests: evaluators, service, API, progress
+cd frontend && npm test     # 44 tests: form validation and mock client
 ```
 
-## Project structure
+## How it works
 
-```
-lld/
-├── docs/
-│   ├── RESEARCH.md       # 1-2 page research: learner problem, existing tools, gaps, product direction
-│   └── DESIGN.md          # MVP explanation, user flow, domain model, evaluation approach, trade-offs
-├── frontend/
-│   ├── src/
-│   │   ├── api/
-│   │   │   ├── client.ts         # API client interface
-│   │   │   ├── mockClient.ts     # Mock implementation with localStorage
-│   │   │   └── errors.ts         # Error types
-│   │   ├── components/           # React components (DesignForm, CriterionCard, etc.)
-│   │   ├── pages/                # Page components (ProblemsPage, ProblemPage, etc.)
-│   │   ├── types.ts              # TypeScript types for domain model
-│   │   └── App.tsx               # Main app with routing
-│   └── package.json
-├── AI_USAGE.md                 # 3-5 meaningful AI-assisted decisions
-└── README.md                   # This file
-```
+### Learner flow
 
-## Key decisions and limitations
+1. **Choose problem**: Parking Lot, Elevator, Vending Machine, LRU Cache.
+2. **Start an attempt** and fill in the design form.
+3. **Submit**: status goes `SUBMITTED → EVALUATING → COMPLETED | FAILED`.
+4. **Read feedback**: each criterion has a score (0-4), quoted evidence, a concern, a suggestion and a confidence.
+5. **Review**: attempt history and the learner's most recurring weak criteria.
+6. **Retry**: each problem has a change request (e.g. "add EV charging spots") to practise evolving a design.
 
-### Decisions
+### Core design (backend/src)
 
-- **Text-only submission.** Avoids code runner complexity and visual editor overhead. Can add code/diagram formats later via `SubmissionContent` interface.
-- **Rubric, not reference solution.** Accepts alternative valid designs. Focuses on properties of the design (responsibilities, coupling, extensibility) rather than similarity to a single answer.
-- **Mock prototype.** Demonstrates the full flow without building a real backend. The design document describes the monolith architecture that would replace the mock.
-- **No auth, multi-user, or payments.** Out of scope for the practice loop. The assignment focuses on LLD/domain design, not a full LMS.
+| Type | Responsibility |
+|---|---|
+| `Evaluator` (interface) | Grades a design and returns `CriterionResult[]`. The extension point for new evaluation approaches. |
+| `RuleBasedEvaluator` | Deterministic checks: sections present, class count, class completeness, keyword requirement coverage (low confidence). |
+| `LLMEvaluator` | Judgement criteria via an LLM with a fixed rubric, JSON output, low temperature and a timeout. Validates untrusted output (unknown criteria dropped, scores clamped to 0-4). |
+| `CompositeEvaluator` | Runs rules, then the judgement evaluator, and merges. If the judgement evaluator fails, falls back to rule results. |
+| `EvaluationService` | Owns the submission lifecycle and the state machine. Takes any `Evaluator`, so it never depends on OpenAI. |
+| `*Repository` | Storage access for problems, attempts and submissions. |
+| `ProgressAnalyzer` | Averages criterion scores across completed submissions to find recurring weaknesses. |
+| `createApp()` | Wires routes and the service, separate from `listen()` so tests can run it. |
 
-### Limitations
+### Criteria
 
-- **Text submission relies on learner honesty.** No executable proof that the design actually works. Accepted for a 2-day MVP.
-- **Keyword requirement matching is heuristic.** Can miss synonyms or give false hits. Results are labelled lower confidence and the LLM cross-checks.
-- **LLM judgement varies.** No human calibration set in the MVP. Mitigations: fixed rubric, low temperature, evidence requirement, validation.
-- **In-process background work loses in-flight jobs on crash.** Because `EVALUATING` is persisted, a startup sweep can re-queue stuck submissions.
-- **Mock time-based transitions.** In the real implementation, state transitions would be event-driven (evaluator started, completed, failed) rather than time-based.
+Eight criteria in total — four rule checks and four LLM-judged:
 
-## Next steps for a production implementation
+| Rule checks (`RuleBasedEvaluator`) | LLM criteria (`LLMEvaluator`) |
+|---|---|
+| `sections-present` — all five sections filled in | `responsibilities` — are responsibilities assigned to focused classes? |
+| `minimum-classes` — a sensible number of types | `coupling` — is coupling reasonable, are interfaces used well? |
+| `requirement-coverage` — keyword match per requirement (low confidence) | `tradeoffs` — are trade-offs and their costs discussed? |
+| `class-completeness` — every class has a responsibility and methods | `extensibility` — how well would the design absorb the change request? |
 
-1. **Replace mock with real backend:**
-   - Implement `EvaluationService` with `RuleBasedEvaluator` and `LLMEvaluator`
-   - Add database persistence (PostgreSQL or similar)
-   - Implement real LLM integration (OpenAI, Anthropic, or local model)
-   - Add a queue for background evaluation (e.g., BullMQ or simple in-memory queue)
+The overall score is the unweighted mean of all returned criteria (0-4 each), rounded to one decimal.
 
-2. **Add tests:**
-   - Unit tests for evaluation logic (rule-based checks, LLM prompt construction)
-   - Integration tests for the full practice flow
-   - Tests for failure scenarios (LLM timeout, malformed JSON, queue errors)
+### Deterministic vs LLM
 
-3. **Calibrate and improve evaluation:**
-   - Add human-graded examples to calibrate the LLM
-   - Refine rubric based on real learner submissions
-   - Add more granular criteria if needed
+- **Deterministic:** anything checkable from structure (is a section blank? does a class have methods?). Same input, same output, free, instantly explainable.
+- **LLM:** things that need judgement (are responsibilities cohesive? is coupling reasonable?). It's constrained by a fixed rubric and must cite evidence.
+- On overlap, **rule results win**.
 
-## Resources
+### API
 
-- [docs/RESEARCH.md](docs/RESEARCH.md) - Research note with competitor analysis and product direction
-- [docs/DESIGN.md](docs/DESIGN.md) - Design note with domain model, evaluation approach, and trade-offs
-- [AI_USAGE.md](AI_USAGE.md) - AI-assisted decisions made during development
-- [frontend/README.md](frontend/README.md) - Frontend-specific documentation
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/problems`, `/api/problems/:id` | List problems / full requirements and change request |
+| POST | `/api/attempts` | Start an attempt `{ problemId }` |
+| GET | `/api/attempts`, `/api/attempts/:id` | History / one attempt with its submissions |
+| POST | `/api/submissions` | Submit `{ attemptId, content }` (201 / 400 / 404 / 409) |
+| GET | `/api/submissions/:id` | Status and evaluation |
+| POST | `/api/submissions/:id/retry` | Retry a `FAILED` submission |
+| GET | `/api/progress` | Weakest criteria across attempts |
+| GET | `/api/health` | `{ status, llm }` |
+
+### Slow or failed evaluation
+
+- The submission is persisted *before* evaluation, and the API returns immediately with `SUBMITTED`. The client polls.
+- LLM calls have a 30 s timeout. Any LLM failure (timeout, bad JSON, no valid criteria) degrades to rule-only feedback, shown as degraded.
+- If everything fails, the submission becomes `FAILED` with a reason, and the learner can **retry** it.
+- Re-submitting an identical design to the same attempt returns `409`.
+
+## Key decisions
+
+- **Text-only submission.** The smallest format that still shows design reasoning. No code runner or diagram editor needed. New formats slot in via `SubmissionContent`.
+- **Rubric, not reference solution**, so alternative valid designs are accepted.
+- **Simple monolith** (Express). No queue or microservices.
+- **Dependency injection at the seams** (`Evaluator`, `ChatClient`) so failure paths are testable without network calls.
+
+## Limitations
+
+- **Storage is in-memory.** The backend loses all data on restart — attempt history resets. A real deployment would swap the repositories for a database; nothing outside `database.ts` and the repositories would need to change.
+- **Evaluation runs in-process.** A crash mid-evaluation leaves a submission in `EVALUATING`; the startup sweep re-runs those on the next boot. (With in-memory storage a restart also wipes everything, so this matters once storage is persistent.)
+- **No auth or multi-user.** All attempts belong to one anonymous learner.
+- **Keyword requirement matching is a heuristic** (labelled low confidence) and can miss synonyms.
+- **LLM judgement varies** and there's no human-calibrated set yet.
+- **Duplicate detection** compares serialised content, so trivial whitespace changes count as a new design.
+- **Mock mode** uses time-based status transitions for demo purposes only.
