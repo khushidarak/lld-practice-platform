@@ -8,6 +8,12 @@ const router = Router()
 const submissionRepo = new SubmissionRepository()
 const attemptRepo = new AttemptRepository()
 
+const MAX_TEXT_LENGTH = 5000
+const MAX_CLASSES = 30
+const MAX_NAME_LENGTH = 120
+const MAX_RESPONSIBILITY_LENGTH = 1000
+const MAX_METHOD_LENGTH = 120
+
 // Store evaluation service instance for background processing
 let evaluationService: EvaluationService | null = null
 
@@ -22,6 +28,10 @@ router.post('/', (req, res) => {
     return res.status(400).json({ error: 'attemptId and content are required' })
   }
 
+  if (!attemptRepo.findById(attemptId)) {
+    return res.status(404).json({ error: 'Attempt not found' })
+  }
+
   // Validate content
   const errors = validateContent(content)
   if (errors.length > 0) {
@@ -30,6 +40,8 @@ router.post('/', (req, res) => {
 
   try {
     const submission = submissionRepo.create(attemptId, content)
+    // Capture before evaluation starts: `submission` is a live reference that evaluation mutates.
+    const initialStatus = submission.status
 
     // Trigger background evaluation
     if (evaluationService) {
@@ -39,7 +51,7 @@ router.post('/', (req, res) => {
       })
     }
 
-    res.status(201).json({ submissionId: submission.id, status: submission.status })
+    res.status(201).json({ submissionId: submission.id, status: initialStatus })
   } catch (error) {
     if (error instanceof Error && error.message === 'DUPLICATE_SUBMISSION') {
       return res.status(409).json({ error: 'This design was already submitted' })
@@ -92,10 +104,38 @@ function validateContent(content: any): string[] {
   if (!content.tradeoffs?.trim()) errors.push('Trade-offs are required')
   if (!content.classes?.length) errors.push('At least one class is required')
 
+  // Bounds keep a submission (and the LLM prompt built from it) a sane size.
+  const TEXT_FIELDS: Array<[string, any]> = [
+    ['Assumptions', content.assumptions],
+    ['Relationships', content.relationships],
+    ['Key flow', content.keyFlow],
+    ['Trade-offs', content.tradeoffs],
+  ]
+  for (const [label, value] of TEXT_FIELDS) {
+    if (typeof value === 'string' && value.length > MAX_TEXT_LENGTH) {
+      errors.push(`${label} must be at most ${MAX_TEXT_LENGTH} characters`)
+    }
+  }
+
+  if (Array.isArray(content.classes) && content.classes.length > MAX_CLASSES) {
+    errors.push(`At most ${MAX_CLASSES} classes are allowed`)
+  }
+
   content.classes?.forEach((cls: any, index: number) => {
     if (!cls.name?.trim() || !cls.responsibility?.trim() || !cls.keyMethods?.length) {
       errors.push(`Class row ${index + 1} is incomplete`)
     }
+    if (typeof cls.name === 'string' && cls.name.length > MAX_NAME_LENGTH) {
+      errors.push(`Class row ${index + 1} name must be at most ${MAX_NAME_LENGTH} characters`)
+    }
+    if (typeof cls.responsibility === 'string' && cls.responsibility.length > MAX_RESPONSIBILITY_LENGTH) {
+      errors.push(`Class row ${index + 1} responsibility must be at most ${MAX_RESPONSIBILITY_LENGTH} characters`)
+    }
+    cls.keyMethods?.forEach((m: any, mIndex: number) => {
+      if (typeof m === 'string' && m.length > MAX_METHOD_LENGTH) {
+        errors.push(`Class row ${index + 1} method ${mIndex + 1} must be at most ${MAX_METHOD_LENGTH} characters`)
+      }
+    })
   })
 
   return errors

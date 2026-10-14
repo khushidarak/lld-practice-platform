@@ -47,13 +47,29 @@ export class SubmissionRepository {
     if (!submission) return
 
     submission.status = status
-    if (metadata?.evaluatingAt) submission.evaluatingAt = metadata.evaluatingAt
-    if (metadata?.completedAt) submission.completedAt = metadata.completedAt
-    if (metadata?.failureReason) submission.failureReason = metadata.failureReason
+    // 'in' check so callers can clear a field by passing undefined (used on retry)
+    if (metadata && 'evaluatingAt' in metadata) submission.evaluatingAt = metadata.evaluatingAt
+    if (metadata && 'completedAt' in metadata) submission.completedAt = metadata.completedAt
+    if (metadata && 'failureReason' in metadata) submission.failureReason = metadata.failureReason
   }
 
   saveEvaluation(submissionId: string, evaluation: Evaluation): void {
     evaluations.set(submissionId, evaluation)
+  }
+
+  /** Submissions stuck in EVALUATING (e.g. after an unclean shutdown). */
+  findEvaluating(): Submission[] {
+    return Array.from(submissions.values()).filter(s => s.status === 'EVALUATING')
+  }
+
+  /** Completed submissions together with their evaluations, for progress analysis. */
+  findCompletedWithEvaluations(): Array<{ submissionId: string; evaluation: Evaluation }> {
+    const out: Array<{ submissionId: string; evaluation: Evaluation }> = []
+    for (const [submissionId, evaluation] of evaluations.entries()) {
+      const submission = submissions.get(submissionId)
+      if (submission?.status === 'COMPLETED') out.push({ submissionId, evaluation })
+    }
+    return out
   }
 
   private hashContent(content: SubmissionContent): string {

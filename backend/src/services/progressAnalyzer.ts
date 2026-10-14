@@ -1,14 +1,17 @@
-import { evaluations, submissions } from '../database.js'
+import { SubmissionRepository } from '../repositories/submissionRepository.js'
 import type { Progress, WeakCriterion } from '../types.js'
 
 export class ProgressAnalyzer {
+  private submissionRepo: SubmissionRepository
+
+  constructor(submissionRepo: SubmissionRepository = new SubmissionRepository()) {
+    this.submissionRepo = submissionRepo
+  }
+
   analyze(): Progress {
     const totals = new Map<string, { criterion: string; sum: number; attempts: number }>()
 
-    for (const [submissionId, evaluation] of evaluations.entries()) {
-      const submission = submissions.get(submissionId)
-      if (!submission || submission.status !== 'COMPLETED') continue
-
+    for (const { evaluation } of this.submissionRepo.findCompletedWithEvaluations()) {
       for (const result of evaluation.results) {
         const prev = totals.get(result.criterionId) ?? {
           criterion: result.criterion,
@@ -21,7 +24,7 @@ export class ProgressAnalyzer {
       }
     }
 
-    const weakCriteria = [...totals.entries()]
+    const weakCriteria: WeakCriterion[] = [...totals.entries()]
       .map(([criterionId, value]) => ({
         criterionId,
         criterion: value.criterion,

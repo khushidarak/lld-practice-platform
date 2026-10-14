@@ -1,6 +1,7 @@
 import type { SubmissionContent, CriterionResult } from '../types.js'
+import type { Evaluator } from './evaluator.js'
 
-export class RuleBasedEvaluator {
+export class RuleBasedEvaluator implements Evaluator {
   evaluate(content: SubmissionContent, problemRequirements: string[]): CriterionResult[] {
     const results: CriterionResult[] = []
 
@@ -99,6 +100,10 @@ export class RuleBasedEvaluator {
       const hasKeyword = keywords.some(kw => contentText.includes(kw.toLowerCase()))
       if (hasKeyword) covered++
       else missingKeywords.push(keywords[0])
+    }
+
+    if (requirements.length === 0) {
+      return { score: 4, evidence: 'The problem lists no requirements to check.', concern: '', suggestion: '' }
     }
 
     const score = (covered / requirements.length) * 4

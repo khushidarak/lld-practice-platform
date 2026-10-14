@@ -93,4 +93,13 @@ function seedProblems(): void {
   }
 }
 
+/** Clears all data and reseeds problems. Used by tests. */
+export function resetDatabase(): void {
+  problems.clear()
+  attempts.clear()
+  submissions.clear()
+  evaluations.clear()
+  seedProblems()
+}
+
 export { problems, attempts, submissions, evaluations }

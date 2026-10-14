@@ -33,7 +33,8 @@ export class AttemptRepository {
       let overallScore: number | null = null
       if (latest && latest.status === 'COMPLETED') {
         const eval_ = evaluations.get(latest.id)
-        overallScore = eval_?.overallScore || null
+        // ?? keeps a legitimate 0 score; only a missing evaluation maps to null
+        overallScore = eval_?.overallScore ?? null
       }
 
       result.push({

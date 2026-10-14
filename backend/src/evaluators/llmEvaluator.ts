@@ -1,12 +1,21 @@
 import OpenAI from 'openai'
 import type { SubmissionContent, CriterionResult } from '../types.js'
+import type { Evaluator } from './evaluator.js'
 
-export class LLMEvaluator {
-  private client: OpenAI
+/** The only slice of the OpenAI SDK we use; lets tests inject a fake. */
+export interface ChatClient {
+  chat: { completions: { create: (body: any, options?: any) => Promise<any> } }
+}
+
+export const LLM_CRITERIA = ['responsibilities', 'coupling', 'tradeoffs', 'extensibility'] as const
+const LLM_TIMEOUT_MS = 30_000
+
+export class LLMEvaluator implements Evaluator {
+  private client: ChatClient
   private model: string
 
-  constructor(apiKey: string, model = 'gpt-4o-mini') {
-    this.client = new OpenAI({ apiKey })
+  constructor(apiKey: string, model = 'gpt-4o-mini', client?: ChatClient) {
+    this.client = client ?? (new OpenAI({ apiKey }) as unknown as ChatClient)
     this.model = model
   }
 
@@ -52,10 +61,10 @@ Respond in JSON format with this exact structure:
         ],
         temperature: 0.3,
         response_format: { type: 'json_object' },
-      })
+      }, { timeout: LLM_TIMEOUT_MS })
 
       const data = JSON.parse(response.choices[0].message.content || '{}')
-      return this.transformResults(data.results, data.overallScore, data.summary)
+      return this.transformResults(data.results)
     } catch (error) {
       console.error('LLM evaluation failed:', error)
       throw new Error('LLM evaluation failed')
@@ -92,7 +101,7 @@ Evaluate on these criteria:
 4. extensibility - How well would the design handle requirement changes? Are extension points clear?
 
 For each criterion, provide:
-- criterionId: use the criterion name above
+- criterionId: exactly one of responsibilities, coupling, tradeoffs, extensibility
 - criterion: the same name
 - score: 0-4 based on the scale
 - evidence: a direct quote from the learner's text that supports your score
@@ -101,16 +110,34 @@ For each criterion, provide:
 - confidence: "high", "medium", or "low"`
   }
 
-  private transformResults(results: any[], overallScore: number, summary: string): CriterionResult[] {
-    return results.map(r => ({
-      criterionId: r.criterionId,
-      criterion: r.criterion,
-      score: r.score,
-      evidence: r.evidence,
-      concern: r.concern || '',
-      suggestion: r.suggestion,
-      confidence: r.confidence || 'medium',
-      source: 'llm' as const,
-    }))
+  /** Validates untrusted model output: unknown criteria are dropped, scores clamped to 0-4. */
+  private transformResults(results: unknown): CriterionResult[] {
+    if (!Array.isArray(results)) throw new Error('LLM response had no results array')
+
+    const valid: CriterionResult[] = []
+    for (const r of results) {
+      if (!r || typeof r !== 'object') continue
+      const raw = r as Record<string, unknown>
+      const id = String(raw.criterionId ?? '')
+      const score = Number(raw.score)
+      if (!(LLM_CRITERIA as readonly string[]).includes(id) || !Number.isFinite(score)) continue
+
+      const confidence = ['high', 'medium', 'low'].includes(String(raw.confidence))
+        ? (raw.confidence as CriterionResult['confidence'])
+        : 'medium'
+      valid.push({
+        criterionId: id,
+        criterion: String(raw.criterion ?? id),
+        score: Math.min(4, Math.max(0, score)),
+        evidence: String(raw.evidence ?? ''),
+        concern: String(raw.concern ?? ''),
+        suggestion: String(raw.suggestion ?? ''),
+        confidence,
+        source: 'llm',
+      })
+    }
+
+    if (valid.length === 0) throw new Error('LLM response contained no valid criteria')
+    return valid
   }
 }

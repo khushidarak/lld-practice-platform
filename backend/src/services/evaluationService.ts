@@ -1,4 +1,5 @@
 import { CompositeEvaluator } from '../evaluators/compositeEvaluator.js'
+import type { Evaluator } from '../evaluators/evaluator.js'
 import { LLMEvaluator } from '../evaluators/llmEvaluator.js'
 import { SubmissionRepository } from '../repositories/submissionRepository.js'
 import { ProblemRepository } from '../repositories/problemRepository.js'
@@ -9,29 +10,33 @@ export class EvaluationService {
   private submissionRepo: SubmissionRepository
   private problemRepo: ProblemRepository
   private attemptRepo: AttemptRepository
-  private evaluator: CompositeEvaluator
+  private evaluator: Evaluator
 
-  constructor(openaiApiKey?: string) {
+  constructor(openaiApiKey?: string, evaluator?: Evaluator) {
     this.submissionRepo = new SubmissionRepository()
     this.problemRepo = new ProblemRepository()
     this.attemptRepo = new AttemptRepository()
 
     const llmEvaluator = openaiApiKey ? new LLMEvaluator(openaiApiKey) : undefined
-    this.evaluator = new CompositeEvaluator(llmEvaluator)
+    this.evaluator = evaluator ?? new CompositeEvaluator(llmEvaluator)
   }
 
   async evaluateSubmission(submissionId: string): Promise<void> {
+    const submission = this.submissionRepo.findById(submissionId)
+    if (!submission) return
+
+    // State-transition guard: only SUBMITTED or FAILED may move to EVALUATING.
+    // Throws outside the try block so an illegal transition never marks FAILED.
+    if (submission.status !== 'SUBMITTED' && submission.status !== 'FAILED') {
+      throw new Error(`Illegal state transition: ${submission.status} -> EVALUATING`)
+    }
+
     // Mark as evaluating
     this.submissionRepo.updateStatus(submissionId, 'EVALUATING', {
       evaluatingAt: new Date().toISOString(),
     })
 
     try {
-      const submission = this.submissionRepo.findById(submissionId)
-      if (!submission) {
-        throw new Error('Submission not found')
-      }
-
       const attempt = this.attemptRepo.findById(submission.attemptId)
       if (!attempt) {
         throw new Error('Attempt not found')
@@ -74,6 +79,21 @@ export class EvaluationService {
         completedAt: new Date().toISOString(),
         failureReason: error instanceof Error ? error.message : 'Unknown error',
       })
+    }
+  }
+
+  /**
+   * Startup sweep: re-queue submissions left in EVALUATING by an unclean
+   * shutdown. Resets them to SUBMITTED (so the transition guard allows the
+   * move) and runs evaluation again.
+   */
+  async requeueStuckSubmissions(): Promise<void> {
+    const stuck = this.submissionRepo.findEvaluating()
+    for (const submission of stuck) {
+      this.submissionRepo.updateStatus(submission.id, 'SUBMITTED', {
+        evaluatingAt: undefined,
+      })
+      await this.evaluateSubmission(submission.id)
     }
   }
 
