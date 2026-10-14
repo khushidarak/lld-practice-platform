@@ -1,5 +1,4 @@
 import '@testing-library/jest-dom'
-import { vi } from 'vitest'
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -19,12 +18,12 @@ const localStorageMock = (() => {
   }
 })()
 
-Object.defineProperty(global, 'localStorage', {
+Object.defineProperty(globalThis, 'localStorage', {
   value: localStorageMock,
 })
 
 // Mock crypto.randomUUID
-Object.defineProperty(global, 'crypto', {
+Object.defineProperty(globalThis, 'crypto', {
   value: {
     randomUUID: () => 'test-uuid-' + Math.random().toString(36).substr(2, 9),
   },

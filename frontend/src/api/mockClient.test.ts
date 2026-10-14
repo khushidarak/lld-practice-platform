@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mockApi } from './mockClient'
-import type { SubmissionContent, DesignClass } from '../types'
+import type { SubmissionContent } from '../types'
 
 const STORAGE_KEY = 'lld-mock-db'
 
@@ -17,11 +17,13 @@ function createValidContent(): SubmissionContent {
     classes: [
       {
         name: 'ParkingLot',
+        kind: 'class',
         responsibility: 'Manages the entire garage',
         keyMethods: ['findSpot', 'issueTicket'],
       },
       {
         name: 'Ticket',
+        kind: 'class',
         responsibility: 'Represents a parking session',
         keyMethods: ['calculateFee'],
       },
@@ -110,7 +112,7 @@ describe('mockClient', () => {
     })
 
     it('includes problem title and latest status', async () => {
-      const attempt = await mockApi.createAttempt('parking-lot')
+      await mockApi.createAttempt('parking-lot')
       const attempts = await mockApi.listAttempts()
 
       expect(attempts[0].problemTitle).toBe('Parking Lot')
@@ -207,6 +209,7 @@ describe('mockClient', () => {
       content.classes = [
         {
           name: '',
+          kind: 'class',
           responsibility: 'Some responsibility',
           keyMethods: ['method1'],
         },
