@@ -1,0 +1,19 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+*.tsbuildinfo
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# logs & OS junk
+*.log
+.DS_Store
+coverage/
+
+# agent workspace metadata
+.freebuff/
