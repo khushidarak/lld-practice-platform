@@ -66,25 +66,18 @@ export function ProblemPage() {
     if (loading || !problem || attempt || !id) return
     if (searchParams.get('retry') !== '1') return
 
-    let cancelled = false
+    // Consume the flag synchronously so this effect does not re-run. The
+    // state updates must NOT be gated on a cancelled flag here: clearing
+    // the search params is itself a dependency change, which re-runs this
+    // effect and would cancel the in-flight attempt we just created.
     setSearchParams({}, { replace: true })
     setStarting(true)
     setStartError(null)
     api
       .createAttempt(id)
-      .then((created) => {
-        if (!cancelled) setAttempt(created)
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) setStartError(formatApiError(err))
-      })
-      .finally(() => {
-        if (!cancelled) setStarting(false)
-      })
-
-    return () => {
-      cancelled = true
-    }
+      .then((created) => setAttempt(created))
+      .catch((err: unknown) => setStartError(formatApiError(err)))
+      .finally(() => setStarting(false))
   }, [loading, problem, attempt, id, searchParams, setSearchParams])
 
   async function handleSubmit(content: SubmissionContent) {
