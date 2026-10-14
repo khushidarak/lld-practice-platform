@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest'
 import type { AddressInfo } from 'node:net'
 import type { Server } from 'node:http'
-import { createApp } from '../src/app.js'
-import { resetDatabase } from '../src/database.js'
-import { EvaluationService } from '../src/services/evaluationService.js'
-import type { Evaluator } from '../src/evaluators/evaluator.js'
+import { createApp } from '../app.js'
+import { resetDatabase } from '../database.js'
+import { EvaluationService } from '../services/evaluationService.js'
+import type { Evaluator } from '../evaluators/evaluator.js'
 import { goodDesign, llmResult } from './fixtures.js'
 
 let server: Server

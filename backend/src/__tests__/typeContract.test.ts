@@ -4,7 +4,8 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
-const repoRoot = path.resolve(here, '..', '..')
+// This file lives at backend/src/__tests__/, so three levels up is the repo root.
+const repoRoot = path.resolve(here, '..', '..', '..')
 const backendTypes = path.join(repoRoot, 'backend', 'src', 'types.ts')
 const frontendTypes = path.join(repoRoot, 'frontend', 'src', 'types.ts')
 const virtualPath = path.join(repoRoot, '__type_contract__.ts')

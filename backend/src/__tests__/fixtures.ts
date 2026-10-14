@@ -1,4 +1,4 @@
-import type { SubmissionContent, CriterionResult } from '../src/types.js'
+import type { SubmissionContent, CriterionResult } from '../types.js'
 
 export const REQUIREMENTS = [
   'Support multiple floors and spot sizes.',

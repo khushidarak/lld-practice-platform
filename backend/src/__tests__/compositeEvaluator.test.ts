@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { CompositeEvaluator } from '../src/evaluators/compositeEvaluator.js'
-import type { Evaluator } from '../src/evaluators/evaluator.js'
+import { CompositeEvaluator } from '../evaluators/compositeEvaluator.js'
+import type { Evaluator } from '../evaluators/evaluator.js'
 import { goodDesign, llmResult, REQUIREMENTS } from './fixtures.js'
 
 describe('CompositeEvaluator', () => {

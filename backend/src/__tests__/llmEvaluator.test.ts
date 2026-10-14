@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { LLMEvaluator, type ChatClient } from '../src/evaluators/llmEvaluator.js'
+import { LLMEvaluator, type ChatClient } from '../evaluators/llmEvaluator.js'
 import { goodDesign, REQUIREMENTS } from './fixtures.js'
 
 function clientReturning(content: string | null): ChatClient {

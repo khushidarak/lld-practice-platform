@@ -42,7 +42,7 @@ Open http://localhost:5173.
 ### Tests
 
 ```bash
-cd backend && npm test      # 68 tests: evaluators, service, API, progress
+cd backend && npm test      # 70 tests: evaluators, service, API, progress, type drift
 cd frontend && npm test     # 44 tests: form validation and mock client
 ```
 

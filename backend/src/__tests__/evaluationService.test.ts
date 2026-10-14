@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { EvaluationService } from '../src/services/evaluationService.js'
-import { SubmissionRepository } from '../src/repositories/submissionRepository.js'
-import { AttemptRepository } from '../src/repositories/attemptRepository.js'
-import { resetDatabase } from '../src/database.js'
-import type { Evaluator } from '../src/evaluators/evaluator.js'
-import { CompositeEvaluator } from '../src/evaluators/compositeEvaluator.js'
+import { EvaluationService } from '../services/evaluationService.js'
+import { SubmissionRepository } from '../repositories/submissionRepository.js'
+import { AttemptRepository } from '../repositories/attemptRepository.js'
+import { resetDatabase } from '../database.js'
+import type { Evaluator } from '../evaluators/evaluator.js'
+import { CompositeEvaluator } from '../evaluators/compositeEvaluator.js'
 import { goodDesign, llmResult } from './fixtures.js'
 
 const submissions = new SubmissionRepository()

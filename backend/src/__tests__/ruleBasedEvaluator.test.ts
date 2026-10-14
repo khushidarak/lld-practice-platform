@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { RuleBasedEvaluator } from '../src/evaluators/ruleBasedEvaluator.js'
+import { RuleBasedEvaluator } from '../evaluators/ruleBasedEvaluator.js'
 import { goodDesign, REQUIREMENTS } from './fixtures.js'
 
 const evaluator = new RuleBasedEvaluator()

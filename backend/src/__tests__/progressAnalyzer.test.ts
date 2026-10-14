@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { ProgressAnalyzer } from '../src/services/progressAnalyzer.js'
-import { evaluations, submissions, resetDatabase } from '../src/database.js'
+import { ProgressAnalyzer } from '../services/progressAnalyzer.js'
+import { evaluations, submissions, resetDatabase } from '../database.js'
 import { llmResult } from './fixtures.js'
-import type { SubmissionStatus } from '../src/types.js'
+import type { SubmissionStatus } from '../types.js'
 
 function addEvaluated(id: string, status: SubmissionStatus, scores: Record<string, number>) {
   submissions.set(id, { id, attemptId: 'a', content: {} as any, contentHash: id, status, createdAt: id })
