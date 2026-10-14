@@ -4,9 +4,7 @@ A focused practice loop for Low-Level Design: **choose a problem → write a str
 
 Learners write their design as structured text (assumptions, classes/interfaces with responsibilities, relationships, key flow, trade-offs). The platform grades it against a **rubric** (not a reference solution, so different valid designs can score well) and quotes evidence from the learner's own text.
 
-- Design note: [docs/DESIGN.md](docs/DESIGN.md)
-- Research note: [docs/RESEARCH.md](docs/RESEARCH.md)
-- AI usage: [AI_USAGE.md](AI_USAGE.md)
+
 
 ## Run it
 
